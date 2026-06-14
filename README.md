@@ -16,7 +16,7 @@ The target method is resolved by name at runtime, so a single build works on bot
 
 ## Configuration
 
-Settings live in `Synth Riders/UserData/MelonPreferences.cfg` under `[SynthStrobeRGB]`. Each entry is documented inline in that file. Press **F6** in-game to reload after editing.
+Settings live in `Synth Riders/UserData/MelonPreferences.cfg` under `[SynthStrobeRGB]`. Each entry is documented inline in that file. 
 
 The main ones:
 
