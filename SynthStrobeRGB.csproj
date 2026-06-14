@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>SynthStrobeRGB</AssemblyName>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+
+    <!-- EDIT to your install. The mod resolves the game type by name at runtime,
+         so it does NOT reference Il2CppAssembly-CSharp and the same build works on both branches. -->
+    <GamePath>F:\SteamLibrary\steamapps\common\SynthRiders</GamePath>
+    <MLNet>$(GamePath)\MelonLoader\net6</MLNet>
+    <Il2Cpp>$(GamePath)\MelonLoader\Il2CppAssemblies</Il2Cpp>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="MelonLoader">
+      <HintPath>$(MLNet)\MelonLoader.dll</HintPath><Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(MLNet)\0Harmony.dll</HintPath><Private>false</Private>
+    </Reference>
+    <Reference Include="Il2CppInterop.Runtime">
+      <HintPath>$(MLNet)\Il2CppInterop.Runtime.dll</HintPath><Private>false</Private>
+    </Reference>
+    <Reference Include="Il2Cppmscorlib">
+      <HintPath>$(Il2Cpp)\Il2Cppmscorlib.dll</HintPath><Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(Il2Cpp)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(Il2Cpp)\UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>
