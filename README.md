@@ -16,7 +16,7 @@ The target method is resolved by name at runtime, so a single build works on bot
 
 ## Configuration
 
-Settings live in `Synth Riders/UserData/MelonPreferences.cfg` under `[SynthStrobeRGB]`. Each entry is documented inline in that file. Press **F6** in-game to reload after editing.
+Settings live in `Synth Riders/UserData/MelonPreferences.cfg` under `[SynthStrobeRGB]`. Each entry is documented inline in that file. 
 
 The main ones:
 
@@ -33,3 +33,17 @@ Edit `<GamePath>` in `SynthStrobeRGB.csproj` to your install folder, then `dotne
 ## Notes
 
 If the mod logs that it could not resolve `Util_StageInteractions.DoMatColor`, the game's lighting class changed on your version — the override will simply stay inactive rather than break anything. Set `LogInterceptedCalls = true` to diagnose.
+
+
+## Known Issues 
+The Mod does not apply it self to the following stages.
+
+Built in Stages -
+Spin City,
+Eclipse,
+Endless Cafe,
+Liquid Disco,
+
+Psycho Road - Untested
+
+All Custom Stages
