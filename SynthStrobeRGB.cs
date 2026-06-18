@@ -25,7 +25,7 @@ using MelonLoader;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-[assembly: MelonInfo(typeof(SynthStrobeRGB.Mod), "SynthStrobeRGB", "1.5.3", "OmniDreamer")]
+[assembly: MelonInfo(typeof(SynthStrobeRGB.Mod), "SynthStrobeRGB", "1.6.2", "OmniDreamer")]
 [assembly: MelonGame("Kluge Interactive", "SynthRiders")]
 
 namespace SynthStrobeRGB
@@ -43,25 +43,13 @@ namespace SynthStrobeRGB
         private MelonPreferences_Entry<bool> _preserveBrightness;
         private MelonPreferences_Entry<float> _minBrightness;
         private MelonPreferences_Entry<string> _palette;
-        private MelonPreferences_Entry<bool> _logCalls;
-        // driver (custom + built-in stages)
-        private MelonPreferences_Entry<bool> _customEnabled;
-        private MelonPreferences_Entry<string> _customProps;
-        private MelonPreferences_Entry<string> _customNameFilter;
-        private MelonPreferences_Entry<bool> _builtinEnabled;
-        private MelonPreferences_Entry<string> _builtinRules;
-        private MelonPreferences_Entry<float> _rescan;
-        private MelonPreferences_Entry<float> _settle;
-        private MelonPreferences_Entry<string> _watchObjects;
-        private MelonPreferences_Entry<float> _interval;
-        private MelonPreferences_Entry<string> _exclude;
 
         public override void OnInitializeMelon()
         {
             _cfg = MelonPreferences.CreateCategory("SynthStrobeRGB");
 
             _enabled = _cfg.CreateEntry("Enabled", true,
-                description: "Master toggle for the official-stage Harmony patch (Util_StageInteractions.DoMatColor).");
+                description: "Master on/off for the whole mod (official, custom, and built-in stage lighting). When off, stages render their stock colours.");
             _mode = _cfg.CreateEntry("Mode", "HueCycle",
                 description: "Colour mode: HueCycle (smooth rainbow), RandomRGB, or Palette (cycle the Palette list). Shared by all systems.");
             _timeBased = _cfg.CreateEntry("HueCycle_TimeBased", true,
@@ -79,37 +67,35 @@ namespace SynthStrobeRGB
                 description: "Surfaces dimmer than this are treated as 'off' and left untouched. Applies to all systems.");
             _palette = _cfg.CreateEntry("Palette", "1,0,0; 0,1,0; 0,0,1; 1,1,0; 0,1,1; 1,0,1",
                 description: "Palette mode colours as 'r,g,b; r,g,b; ...' (channels 0..1).");
-            _logCalls = _cfg.CreateEntry("LogInterceptedCalls", false,
-                description: "Diagnostic: log intercepted official-stage DoMatColor calls (throttled).");
 
-            _customEnabled = _cfg.CreateEntry("CustomStage_Enabled", true,
-                description: "Drive custom SDK stages via the Strobereciever source material.");
-            _customProps = _cfg.CreateEntry("CustomStage_Properties", "_Color",
-                description: "Colour properties to drive on the custom-stage source material, comma-separated.");
-            _customNameFilter = _cfg.CreateEntry("CustomStage_MaterialNameFilter", "reciever",
-                description: "Material-name substring identifying the custom-stage source (SDK spelling: 'Strobereciever').");
-
-            _builtinEnabled = _cfg.CreateEntry("BuiltinStage_Enabled", true,
-                description: "Drive built-in environment stages whose lighting is animated emissive/neon (e.g. Stage 02).");
-            _builtinRules = _cfg.CreateEntry("BuiltinStage_Rules",
-                "DynamicLights Opaque|[Stage]|_Color",
-                description: "Rules as 'shaderContains|pathContains|property', semicolon-separated. Default targets only the neon strips (DynamicLights Opaque). Optional add-ons (usually look worse and cost more): '; Buildings|[Stage]|_EmissionColor' for the Buildings-shader glow, '; Universal Render Pipeline/Lit|[Stage]|_EmissionColor' for emissive scenery. Path scope keeps these off props; they pause while the tile system drives.");
-
-            _rescan = _cfg.CreateEntry("Driver_RescanDelaySeconds", 1.0f,
-                description: "Delay after a stage loads before the first scan for target materials.");
-            _settle = _cfg.CreateEntry("Driver_StageDetectSeconds", 12.0f,
-                description: "After a stage loads, keep re-checking for this long to catch parts that instantiate late (e.g. custom-stage receivers appearing in sequence). Scanning never runs during steady play. Press F5 to force a rescan if a late swap is ever missed.");
-            _watchObjects = _cfg.CreateEntry("Driver_WatchObjects", "PlatformAnchor,[Stage]",
-                description: "Comma-separated object names whose child-count is watched to detect a stage loading/unloading (custom stages instantiate into PlatformAnchor; built-in stages under [Stage]). Cheap to watch; triggers a rescan when they change.");
-            _interval = _cfg.CreateEntry("Driver_ColorIntervalSeconds", 0.4f,
-                description: "RandomRGB/Palette modes: how long to hold each colour before switching. HueCycle ignores this.");
-            _exclude = _cfg.CreateEntry("Driver_ExcludeMaterials", "",
-                description: "Comma-separated material-name substrings to leave untouched (reverts them to stock).");
-
-            LoadConfig();
+            ApplyFixedConfig();   // internal targeting/timing — not user-exposed
+            LoadConfig();         // user-facing look-and-feel options
             ApplyPatch();
 
             LoggerInstance.Msg("Loaded. Edit MelonPreferences.cfg [SynthStrobeRGB] and press F6 in-game to reload.");
+        }
+
+        // Fixed internal configuration: stage-targeting rules, scan timing, and load detection.
+        // These are implementation details that shouldn't be user-tweakable, so they live in code
+        // rather than the .cfg. Set once at load.
+        private void ApplyFixedConfig()
+        {
+            Patches.LogCalls = false;
+
+            MaterialDriver.ScanDelay = 1.0f;
+            MaterialDriver.SettleSeconds = 12.0f;
+            MaterialDriver.ColorInterval = 0.4f;
+            MaterialDriver.Excludes = new List<string>();
+            MaterialDriver.SetWatchObjects(ParseCsv("PlatformAnchor,[Stage]"));
+
+            var rules = new List<DriveRule>
+            {
+                // custom SDK stages: drive the Strobereciever source material (feeds the strobe RTs)
+                new DriveRule(shaderContains: "", nameContains: "reciever", pathContains: "", prop: "_Color", gateOnTile: false),
+                // built-in environment stages: the neon strips, scoped to [Stage], paused while the tile system drives
+                new DriveRule(shaderContains: "DynamicLights Opaque", nameContains: "", pathContains: "[Stage]", prop: "_Color", gateOnTile: true),
+            };
+            MaterialDriver.SetRules(rules);
         }
 
         public override void OnLateUpdate() => MaterialDriver.Tick(LoggerInstance);
@@ -167,34 +153,7 @@ namespace SynthStrobeRGB
             Rgb.PreserveBrightness = _preserveBrightness.Value;
             Rgb.MinBrightness = Mathf.Max(0f, _minBrightness.Value);
             Rgb.Palette = ParsePalette(_palette.Value);
-            Patches.LogCalls = _logCalls.Value;
-
-            // Build the driver's rule set from config.
-            var rules = new List<DriveRule>();
-            if (_customEnabled.Value)
-            {
-                string nameFilter = (_customNameFilter.Value ?? "").Trim();
-                foreach (var prop in ParseCsv(_customProps.Value))
-                    rules.Add(new DriveRule(shaderContains: "", nameContains: nameFilter, pathContains: "", prop: prop, gateOnTile: false));
-            }
-            if (_builtinEnabled.Value)
-            {
-                foreach (var raw in (_builtinRules.Value ?? "").Split(';'))
-                {
-                    var parts = raw.Split('|');
-                    if (parts.Length < 3) continue;
-                    string prop = parts[2].Trim();
-                    if (prop.Length == 0) continue;
-                    rules.Add(new DriveRule(parts[0].Trim(), "", parts[1].Trim(), prop, gateOnTile: true));
-                }
-            }
-
-            MaterialDriver.ScanDelay = Mathf.Max(0f, _rescan.Value);
-            MaterialDriver.SettleSeconds = Mathf.Max(0f, _settle.Value);
-            MaterialDriver.SetWatchObjects(ParseCsv(_watchObjects.Value));
-            MaterialDriver.ColorInterval = Mathf.Max(0f, _interval.Value);
-            MaterialDriver.Excludes = ParseCsv(_exclude.Value);
-            MaterialDriver.SetRules(rules);   // restores + forces rescan
+            MaterialDriver.SetActive(_enabled.Value);   // master switch also governs the custom/neon driver
         }
 
         private string NormalizeMode(string m)
@@ -298,7 +257,8 @@ namespace SynthStrobeRGB
         private static readonly Dictionary<int, string> _shaderNames = new Dictionary<int, string>(); // shaderId -> name
         private static float _scanAt = 0f, _lastScanTime = -999f, _lastColorChange, _settleUntil = 0f;
         private static float _lastCheck = -999f;
-        private static int _lastCamCount = -1, _lastSceneCount = -1, _lastReported = -1;
+        private static int _lastCamCount = -1, _lastSceneCount = -1;
+        private static bool _active = true;
 
         private class Watch { public string Name; public Transform Tf; public int Count = -1; }
         private static List<Watch> _watches = new List<Watch>();
@@ -317,6 +277,14 @@ namespace SynthStrobeRGB
         private static bool _warned;
 
         private struct Target { public Material Mat; public int PropId; public bool Gate; }
+
+        // Master on/off. Disabling reverts driven materials to stock; enabling triggers a fresh scan.
+        public static void SetActive(bool on)
+        {
+            if (_active && !on) Restore();
+            else if (!_active && on) MarkDirty();
+            _active = on;
+        }
 
         // Called from a scene-load event or the manual rescan key: schedule a (debounced) rescan.
         public static void MarkDirty()
@@ -342,7 +310,7 @@ namespace SynthStrobeRGB
 
         public static void Tick(MelonLogger.Instance log)
         {
-            if (_rules.Count == 0) return;
+            if (!_active || _rules.Count == 0) return;
             try
             {
                 float now = Time.realtimeSinceStartup;
@@ -385,11 +353,6 @@ namespace SynthStrobeRGB
                 {
                     Rescan();
                     _lastScanTime = now;
-                    if (_targets.Count != _lastReported)
-                    {
-                        _lastReported = _targets.Count;
-                        log.Msg($"Driver: now driving {_targets.Count} material(s).");
-                    }
                     if (now < _settleUntil)
                         _scanAt = now + SettleInterval;   // keep re-checking; late-loading parts get added
                     else
