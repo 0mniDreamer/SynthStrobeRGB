@@ -12,7 +12,7 @@ The strobe's timing, intensity, on/off pulse and HDR bloom are preserved; only t
 
 ## Requirements
 
-- Synth Riders ( should work on Unity 2021 and has been confirmed working on Unity 6 game branches)
+- Synth Riders (works on Unity 2021 and also on Unity 6 game branches)
 - MelonLoader 0.7.2 or newer (.NET 6 / IL2CPP)
 
 ## Install
@@ -60,3 +60,7 @@ The mod identifies the game's lighting by name at runtime, so it should work acr
 Note that the mod does not affect the hand orb colours, which remain the same as in stock Synth Riders. The mod only changes the stage lighting.
 
 ## Score chasers use at your own risk : the mod does not change the timing of the strobe, but the new colours may make it harder to see the beat cues on some stages.
+
+## Credits
+- Synth Riders by Kluge Interactive
+- MelonLoader by LavaGang
